@@ -1,13 +1,15 @@
-# writing_style_lm
+# Writing Style LM
 Language model code for short stories.
 
 This is the code used for the style features classification in the following paper:
 
-[The Effect of Different Writing Tasks on Linguistic Style: A Case Study of the ROC Story Cloze Task] (https://arxiv.org/abs/1702.01841)
+The Effect of Different Writing Tasks on Linguistic Style: A Case Study of the ROC Story Cloze Task 
 Roy Schwartz, Maarten Sap, Yannis Konstas, Leila Zilles, Yejin Choi and Noah A. Smith, CoNLL 2017
+[arXiv version](https://arxiv.org/abs/1702.01841)
 
 Requirements:
-- python3, tensorflow1.0, pandas, numpy, nltk
+- python3
+- tensorflow1.0, pandas, numpy, nltk
 
 Running:
 `./main.py ...`
