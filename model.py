@@ -4,12 +4,9 @@ import os, time
 import tensorflow as tf
 from reader import *
 from IPython import embed
-from nltk import bleu
+
 from sklearn.metrics import \
   accuracy_score, precision_recall_fscore_support
-from scipy.stats import entropy,\
-  pearsonr,ttest_ind,ttest_rel
-import statsmodels.api as sm
 
 ###############################################
 ######## Saving and loading functions #########

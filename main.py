@@ -5,9 +5,6 @@ import argparse
 
 from reader import *
 from model import *
-import matplotlib.pyplot as plt
-
-from scipy.signal import savgol_filter # for smoothing?
 
 p = argparse.ArgumentParser()
 p.add_argument("--data_path", metavar="PATH",
@@ -27,9 +24,9 @@ p.add_argument("--reverse_prob",default=False,action="store_true",
                help="""Reverse the scoring prob from p(s|c) to p(c|s)""")
 p.add_argument("--learning_rate", metavar="LR",type=float,default=0.001,
                help="""Learning rate for AdamOptimizer.""")
-p.add_argument("--hidden_size", dest="hidden_size", type=int,default=256,
+p.add_argument("--hidden_size", dest="hidden_size", type=int,default=512,
                help="""Size of tensors in hidden layer.""")
-p.add_argument("-b","--batch_size", dest="batch_size", type=int,default=50,
+p.add_argument("-b","--batch_size", dest="batch_size", type=int,default=32,
                help="""Batch size to pass through the graph.""")
 p.add_argument("--max_epoch", dest="max_epoch", type=int,default=150,
                help="""Determines how many passes throught the training data to do""")
@@ -53,15 +50,9 @@ from datetime import timedelta
 def test_overfitting(cost_hist):
   if len(cost_hist) < 3: return False
   
-  # window_size = 7
-  # poly_order = 5
-  # if len(cost_hist) < window_size:
   return cost_hist[-2] < cost_hist[-1] and \
       cost_hist[-3] < cost_hist[-2]
-  # hist = np.array(cost_hist)
-  # smooth = savgol_filter(hist,window_size,poly_order)
-  # if len(cost_hist) > 20:
-  #   embed()
+
 
 
 def train(path, data_path, reader_path):
@@ -80,13 +71,8 @@ def train(path, data_path, reader_path):
   log(r)
 
   args.vocab_size = r.vocab_size
-  
-  classs = os.path.basename(path).split("_")[0]
-  classs = re.sub(r"^\d+","N",classs)
-  
+   
   batch_yielder = r.LMBatchYielder
-
-  classs = eval(classs)
 
   # Has to be done in this order
   train_batches = [b for b in batch_yielder(
@@ -101,9 +87,9 @@ def train(path, data_path, reader_path):
   train_batches = [b for b in batch_yielder(
     args.batch_size,d="train_train")]
 
-  m = classs(args,r,is_training=True)
+  m = LangModel(args,r,is_training=True)
 
-  val_m = classs(args,r,is_training=False,init=False,
+  val_m = LangModel(args,r,is_training=False,init=False,
                  trained_model=m,summ=True)
   
   prev_cost = prev_prev_cost = val_cost = 1e10
@@ -162,7 +148,7 @@ def train(path, data_path, reader_path):
   log("Summary files saved to:\n{}".format(val_m.summaryWriter.get_logdir()))
 
   
-def test(model_path,reader_path):
+def test(model_path,reader_path,export=False):
   r = load_reader(reader_path)
   
   log(r)
@@ -170,10 +156,7 @@ def test(model_path,reader_path):
   # reader determines vocab_size
   args.vocab_size = r.vocab_size
   
-  classs = re.sub(r"^\d+","N",os.path.basename(model_path).split("_")[0])
   batch_yielder = r.LMBatchYielder
-  
-  classs = eval(classs) if classs!="LM" else EncDec
   
   test_batches = [b for b in batch_yielder(
     args.batch_size,d="test")]
@@ -182,7 +165,7 @@ def test(model_path,reader_path):
   test_batches = [b for b in batch_yielder(
     args.batch_size,d="test")]
 
-  m = classs(args,r,is_training=False,init=False)
+  m = LangModel(args,r,is_training=False,init=False)
   load_model(model_path,m)
   
   xent_r, xent_w, class_report = m.test_epoch(val_batches,args.reverse_prob)
@@ -194,45 +177,13 @@ def test(model_path,reader_path):
   log("Total cost (test): right: {:.5f}, wrong: {:.5f}".format(xent_r,xent_w))
   print(class_report)
 
-def export(model_path,reader_path):
-  r = load_reader(reader_path)
-  
-  log(r)
+  if export:
+    assert args.reverse_prob, "Can only export with --reverse_prob"
+    
+    val_df.to_csv("val_LMscores.csv")
+    test_df.to_csv("test_LMscores.csv")
 
-  assert args.reverse_prob, "Can only export with --reverse_prob"
-  
-  # reader determines vocab_size
-  args.vocab_size = r.vocab_size
-  
-  classs = re.sub(r"^\d+","N",os.path.basename(model_path).split("_")[0])
-  batch_yielder = r.LMBatchYielder
-
-  classs = eval(classs) if classs!="LM" else EncDec
-  
-  test_batches = [b for b in batch_yielder(
-    args.batch_size,d="test")]
-  val_batches = [b for b in batch_yielder(
-    args.batch_size,d="val")][:2]
-  test_batches = [b for b in batch_yielder(
-    args.batch_size,d="test")][:2]
-
-  m = classs(args,r,is_training=False,init=False)
-  load_model(model_path,m)
-  
-  xent_r, xent_w, class_report, val_df = m.test_epoch(val_batches,args.reverse_prob, export=True)
-  mean_xent = (xent_r+xent_w)/2
-  log("Total cost (val): right: {:.5f}, wrong: {:.5f}".format(xent_r,xent_w))
-  print(class_report)
-  xent_r, xent_w, class_report, test_df = m.test_epoch(test_batches,args.reverse_prob,export=True)
-  mean_xent = (xent_r+xent_w)/2
-  log("Total cost (test): right: {:.5f}, wrong: {:.5f}".format(xent_r,xent_w))
-  print(class_report)
-  
-  val_df.to_csv("val_LMscores.csv")
-  test_df.to_csv("test_LMscores.csv")
-
-  log("Exported the Lang model scores to '{}', '{}'".format("val_LMscores.csv","test_LMscores.csv"))
-  
+    log("Exported the Lang model scores to '{}', '{}'".format("val_LMscores.csv","test_LMscores.csv"))    
   
 def main(args):
   if args.train and (args.data_path or args.reader_path):
@@ -240,7 +191,7 @@ def main(args):
   elif args.test and args.reader_path:
     test(args.test, args.reader_path)
   elif args.export and args.reader_path:
-    export(args.export, args.reader_path)
+    test(args.export, args.reader_path, True)
   else:
     print("Specify --train")
     p.print_help()
