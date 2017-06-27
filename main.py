@@ -168,11 +168,19 @@ def test(model_path,reader_path,export=False):
   m = LangModel(args,r,is_training=False,init=False)
   load_model(model_path,m)
   
-  xent_r, xent_w, class_report = m.test_epoch(val_batches,args.reverse_prob)
+  out = m.test_epoch(val_batches,args.reverse_prob,export=export)
+  xent_r, xent_w, class_report = out[:3]
+  if export:
+    val_df = out[3]
   mean_xent = (xent_r+xent_w)/2
   log("Total cost (val): right: {:.5f}, wrong: {:.5f}".format(xent_r,xent_w))
   print(class_report)
-  xent_r, xent_w, class_report = m.test_epoch(test_batches,args.reverse_prob)
+  
+  out = m.test_epoch(test_batches,args.reverse_prob,export=export)
+  xent_r, xent_w, class_report = out[:3]
+  if export:
+    test_df = out[3]
+    
   mean_xent = (xent_r+xent_w)/2
   log("Total cost (test): right: {:.5f}, wrong: {:.5f}".format(xent_r,xent_w))
   print(class_report)
@@ -191,7 +199,7 @@ def main(args):
   elif args.test and args.reader_path:
     test(args.test, args.reader_path)
   elif args.export and args.reader_path:
-    test(args.export, args.reader_path, True)
+    test(args.export, args.reader_path, export=True)
   else:
     print("Specify --train")
     p.print_help()

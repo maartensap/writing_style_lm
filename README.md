@@ -34,11 +34,16 @@ Once a model is trained, use the following commands to test your language model:
 
 For exporting purposes, use this:
 
-`./main.py --train ROCLangModel --reader_path reader.pkl --hidden_size 512 --batch_size 32 --reverse_prob`
-This will create two files containing $p(s_5)$ and $p(s_5|s_1,s_2,s_3,s_4)$ for the ROC validation and test sets.
+`./main.py --export ROCLangModel --reader_path reader.pkl --hidden_size 512 --batch_size 32 --reverse_prob`
+This will create two files containing $p(s_5)$ and $p(s_5|s_1,s_2,s_3,s_4)$ for the ROC validation and test sets:
+- `val_LMscores.csv`
+- `test_LMscores.csv`
+
 
 ## Misc
 This code uses random initialization, so results will vary from the results in the paper.
+
+Training time on CPU takes about a day. With Tensorflow you can seamlessly switch to a GPU by loading the GPU version of TF.
 
 ## Contact
 msap@cs.washington.edu
